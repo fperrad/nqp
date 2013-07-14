@@ -306,7 +306,10 @@ class QAST::Compiler is HLL::Compiler {
             
             # If we need to do deserialization, emit code for that.
             if $comp_mode {
-                $block.push(self.deserialization_code($cu.sc, $cu.serialize_sc, $cu.code_ref_blocks(),
+                if !$cu.sc_has_been_serialized {
+                    $cu.serialize_sc;
+                }
+                $block.push(self.deserialization_code($cu, $cu.code_ref_blocks(),
                     $cu.repo_conflict_resolver()));
             }
             
@@ -338,19 +341,17 @@ class QAST::Compiler is HLL::Compiler {
         $block_post
     }
     
-    method deserialization_code($sc, $serialized_sc, @code_ref_blocks, $repo_conf_res) {
+    method deserialization_code($cu, @code_ref_blocks, $repo_conf_res) {
         # Serialize it.
-        my $sh := $serialized_sc<sh>;
-        my $serialized := $serialized_sc<data>;
-        
+
         # String heap QAST.
         my $sh_ast := QAST::Op.new( :op('list_s') );
-        my $sh_elems := nqp::elems($sh);
+        my $sh_elems := nqp::elems($cu.sc_sh);
         my $i := 0;
         while $i < $sh_elems {
-            $sh_ast.push(nqp::isnull_s($sh[$i])
+            $sh_ast.push(nqp::isnull_s($cu.sc_sh[$i])
                 ?? QAST::Op.new( :op('null_s') )
-                !! QAST::SVal.new( :value($sh[$i]) ));
+                !! QAST::SVal.new( :value($cu.sc_sh[$i]) ));
             $i := $i + 1;
         }
         
@@ -373,12 +374,12 @@ class QAST::Compiler is HLL::Compiler {
             QAST::Op.new(
                 :op('bind'),
                 QAST::Var.new( :name('cur_sc'), :scope('local'), :decl('var') ),
-                QAST::Op.new( :op('createsc'), QAST::SVal.new( :value($sc.handle()) ) )
+                QAST::Op.new( :op('createsc'), QAST::SVal.new( :value($cu.sc.handle()) ) )
             ),
             QAST::Op.new(
                 :op('scsetdesc'),
                 QAST::Var.new( :name('cur_sc'), :scope('local') ),
-                QAST::SVal.new( :value($sc.description) )
+                QAST::SVal.new( :value($cu.sc.description) )
             ),
             QAST::Op.new(
                 :op('bind'),
@@ -387,7 +388,7 @@ class QAST::Compiler is HLL::Compiler {
             ),
             QAST::Op.new(
                 :op('deserialize'),
-                QAST::SVal.new( :value($serialized) ),
+                QAST::SVal.new( :value($cu.sc_data) ),
                 QAST::Var.new( :name('cur_sc'), :scope('local') ),
                 $sh_ast,
                 QAST::Block.new( :blocktype('immediate'), $cr_past ),
