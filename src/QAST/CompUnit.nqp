@@ -1,6 +1,10 @@
 class QAST::CompUnit is QAST::Node {
     # The serialization context for the compilation unit.
     has $!sc;
+
+    # The serialization context can be serialized ones so we keep the result
+    # if we want to compile the same compunit on two different backends
+    has $!serialized_sc;
     
     # Code reference block list for the serialization context.
     has $!code_ref_blocks;
@@ -33,6 +37,24 @@ class QAST::CompUnit is QAST::Node {
     method hll(*@value)      { $!hll := @value[0] if @value; $!hll }
     method load(*@value)     { $!load := @value[0] if @value; $!load }
     method main(*@value)     { $!main := @value[0] if @value; $!main }
+
+    # the sc is serialized the first time this method is called
+    method serialize_sc() {
+        if $!serialized_sc {
+            $!serialized_sc;
+        }
+        else {
+            $!serialized_sc := nqp::hash();
+
+            $!serialized_sc<sh> := nqp::list_s();
+            $!serialized_sc<data> := nqp::serialize($!sc, $!serialized_sc<sh>);
+
+            # Now it's serialized, pop this SC off the compiling SC stack
+            nqp::popcompsc();
+
+            $!serialized_sc;
+        }
+    }
     
     method compilation_mode(*@value) {
         $!compilation_mode := @value[0] if @value; $!compilation_mode

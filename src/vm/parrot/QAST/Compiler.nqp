@@ -306,7 +306,7 @@ class QAST::Compiler is HLL::Compiler {
             
             # If we need to do deserialization, emit code for that.
             if $comp_mode {
-                $block.push(self.deserialization_code($cu.sc(), $cu.code_ref_blocks(),
+                $block.push(self.deserialization_code($cu.sc, $cu.serialize_sc, $cu.code_ref_blocks(),
                     $cu.repo_conflict_resolver()));
             }
             
@@ -338,13 +338,10 @@ class QAST::Compiler is HLL::Compiler {
         $block_post
     }
     
-    method deserialization_code($sc, @code_ref_blocks, $repo_conf_res) {
+    method deserialization_code($sc, $serialized_sc, @code_ref_blocks, $repo_conf_res) {
         # Serialize it.
-        my $sh := nqp::list_s();
-        my $serialized := nqp::serialize($sc, $sh);
-        
-        # Now it's serialized, pop this SC off the compiling SC stack.
-        nqp::popcompsc();
+        my $sh := $serialized_sc<sh>;
+        my $serialized := $serialized_sc<data>;
         
         # String heap QAST.
         my $sh_ast := QAST::Op.new( :op('list_s') );
