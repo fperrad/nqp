@@ -10,6 +10,9 @@ class NQP::Compiler is HLL::Compiler {
 
 # Create and configure compiler object.
 my $nqpcomp := NQP::Compiler.new();
+#?if tvmjit
+$nqpcomp.backend(HLL::Backend::TvmJIT);
+#?endif
 $nqpcomp.language('nqp');
 $nqpcomp.parsegrammar(NQP::Grammar);
 $nqpcomp.parseactions(NQP::Actions);
@@ -48,6 +51,9 @@ sub MAIN(@ARGS) {
 sub MAIN(@ARGS) {
 #?endif
 #?if jvm
+sub MAIN(*@ARGS) {
+#?endif
+#?if tvmjit
 sub MAIN(*@ARGS) {
 #?endif
     # Enter the compiler.

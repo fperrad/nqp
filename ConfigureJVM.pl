@@ -81,6 +81,8 @@ MAIN: {
     $config{'cpsep'} = $^O eq 'MSWin32' ? ';' : ':';
     $config{'slash'} = $^O eq 'MSWin32' ? '\\' : '/';
     $config{'runner'} = $^O eq 'MSWin32' ? 'nqp.bat' : 'nqp';
+    $config{'runnertp'} = $^O eq 'MSWin32' ? 'nqp-tp.bat' : 'nqp-tp';
+    $config{'runnerjit'} = $^O eq 'MSWin32' ? 'nqpjit.bat' : 'nqpjit';
     $config{'prefix'} = $prefix;
 
     fill_template_file('tools/build/Makefile-JVM.in', 'Makefile', %config);

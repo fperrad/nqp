@@ -134,6 +134,19 @@ NQP_SOURCES  = \
   src/NQP/Actions.nqp \
   src/NQP/Compiler.nqp \
 
+NQPTP_JAR      = nqp-tp.jar
+NQPTP_COMBINED = gen/NQPTP.nqp
+NQPTP_SOURCES  = \
+  src/NQP/World.nqp \
+  src/NQP/Grammar.nqp \
+  src/vm/jvm/NQP/Ops.nqp \
+  src/NQP/Optimizer.nqp \
+  src/NQP/Actions.nqp \
+  src/vm/tvmjit/QAST/TOST.nqp \
+  src/vm/tvmjit/QAST/Compiler.nqp \
+  src/vm/tvmjit/HLL/Backend.nqp \
+  src/NQP/Compiler.nqp \
+
 STAGE1_OUTPUT = $(STAGE1)/$(NQP_MO_JAR) $(STAGE1)/$(MODULE_LOADER_JAR) \
                 $(STAGE1)/$(CORE_SETTING_JAR) $(STAGE1)/$(QASTNODE_JAR) \
                 $(STAGE1)/$(QREGEX_JAR) $(STAGE1)/$(HLL_JAR) \
@@ -153,8 +166,10 @@ ALL_OUTPUT = $(NQP_MO_JAR) $(MODULE_LOADER_JAR) \
              $(P6QREGEX_JAR) $(NQP_JAR) \
 
 RUNNER = @runner@
+RUNNERTP = @runnertp@
+RUNNERJIT = @runnerjit@
 
-all: $(ALL_OUTPUT) $(RUNNER) $(P5QREGEX_JAR)
+all: $(ALL_OUTPUT) $(RUNNER) $(RUNNERTP) $(RUNNERJIT) $(P5QREGEX_JAR) $(NQPTP_JAR)
 
 install: all
 	$(MKPATH) $(BIN_DIR)
@@ -188,7 +203,7 @@ $(RUNTIME_JAR): $(RUNTIME_JAVAS) tools/build/gen-jvm-properties.pl
 	$(JAR) cf0 nqp-runtime.jar -C bin/ .
 
 clean:
-	$(PERL) -MExtUtils::Command -e rm_rf *.class *.jar src/stage1 src/stage2 bin nqp nqp.bat jvmconfig.properties
+	$(PERL) -MExtUtils::Command -e rm_rf *.class *.jar src/stage1 src/stage2 bin nqp nqp.bat jvmconfig.properties nqp-tp nqpjit
 
 $(STAGE0): $(RUNTIME_JAR)
 
@@ -344,11 +359,27 @@ $(RUNNER): src/vm/jvm/runners/$(RUNNER)
 	$(CP) src/vm/jvm/runners/$(RUNNER) .
 	$(CHMOD) 755 $(RUNNER)
 
+$(RUNNERTP): src/vm/tvmjit/runners/$(RUNNERTP)
+	$(CP) src/vm/tvmjit/runners/$(RUNNERTP) .
+	$(CHMOD) 755 $(RUNNERTP)
+
+$(RUNNERJIT): src/vm/tvmjit/runners/$(RUNNERJIT)
+	$(CP) src/vm/tvmjit/runners/$(RUNNERJIT) .
+	$(CHMOD) 755 $(RUNNERJIT)
+
 $(P5QREGEX_JAR): $(ALL_OUTPUT) $(P5QREGEX_SOURCES)
 	$(MKPATH) $(STAGE2)/gen
 	$(PERL) tools/build/gen-cat.pl jvm $(P5QREGEX_SOURCES) > $(STAGE2)/$(P5QREGEX_COMBINED)
 	.@slash@$(RUNNER) --target=jar --output=$(P5QREGEX_JAR) \
 	    $(STAGE2)/$(P5QREGEX_COMBINED)
+
+$(NQPTP_JAR): $(ALL_OUTPUT) $(NQPTP_SOURCES)
+	$(MKPATH) $(STAGE2)/gen
+	$(PERL) tools/build/gen-version.pl > src/gen/nqp-config.nqp
+	$(PERL) tools/build/gen-cat.pl tvmjit $(NQPTP_SOURCES) src/gen/nqp-config.nqp > $(STAGE2)/$(NQPTP_COMBINED)
+	./$(RUNNER) --target=jar --output=$(NQPTP_JAR) --javaclass=nqp-tp \
+	    $(STAGE2)/$(NQPTP_COMBINED)
+
 
 bootstrap-files: $(STAGE2_OUTPUT)
 	$(CP) $(STAGE2)/$(NQP_MO_JAR) $(STAGE0)
